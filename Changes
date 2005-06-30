@@ -1,0 +1,10 @@
+Revision history for Perl extension Class::DBI::FormBuilder::Plugin::Time::Piece.
+
+0.02  Jun 30 2005
+	- First Release
+	- Handles time, date, datetime, and timestamp types for MySQL only.
+
+0.01  Thu Jun 30 09:50:08 2005
+	- original version; created by h2xs 1.23 with options
+		-AXn Class::DBI::FormBuilder::Plugin::Time::Piece
+
