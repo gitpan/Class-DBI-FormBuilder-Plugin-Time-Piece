@@ -4,11 +4,27 @@ use warnings;
 
 use Class::DBI::FormBuilder 0.32 ();
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 sub field {
 	my($class,$them,$form,$field) = @_;
 	my $type = $them->column_type($field);
+
+	# this is called as a class method
+	# there's no data to get, so just create the empty field
+	unless(ref $them) {
+		return $form->field(
+			name		=>	$field,
+			value		=>	'',
+			required	=>	0, # ??
+			validate	=>	{
+					date		=>	'/^(?:|\d{4}-\d\d-\d\d)$/',
+					time		=>	'/^(?:|\d\d:\d\d:\d\d)$/',
+					datetime	=>	'/^(?:|\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)$/',
+					timestamp	=>	'/^(?:|\d{14})$/',
+				}->{$type},
+		);
+	}
 
 	my $value = $them->$field.''; # lousy default
 	my $validate = undef;

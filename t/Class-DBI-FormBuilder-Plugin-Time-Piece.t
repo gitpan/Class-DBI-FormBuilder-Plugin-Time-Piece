@@ -32,7 +32,7 @@ BEGIN {
     		 )
 		]) or die $DBI::errstr;
 	};
-	plan $@ ? (skip_all => 'needs a mysql account with create/drop table privs for testing') : (tests => 7);
+	plan $@ ? (skip_all => 'needs a mysql account with create/drop table privs for testing') : (tests => 11);
 }
 
 # clean the db
@@ -77,16 +77,21 @@ my $not_null = My::Film->create({
 }) or die "failed to create object";
 
 my $null_form = $null->as_form->render;
-print $null_form;
 ok($null_form =~ /name="d" type="text" value=""/,"date IS NULL");
 ok($null_form =~ /name="t" type="text" value=""/,"time IS NULL");
 ok($null_form =~ /name="dt" type="text" value=""/,"datetime IS NULL");
 
 my $not_null_form = $not_null->as_form->render;
-print "\n\n".$not_null_form;
 ok($not_null_form =~ /name="d" type="text" value="2001-01-01"/,"date IS NOT NULL");
 ok($not_null_form =~ /name="t" type="text" value="11:11:11"/,"time IS NOT NULL");
 ok($not_null_form =~ /name="dt" type="text" value="2002-02-02 12:12:12"/,"datetime IS NOT NULL");
 ok($not_null_form =~ /name="ts" type="text" value="\d{14}"/,"timestamp IS NOT NULL");
+
+# create an empty form, as when creating a thing
+my $empty_form = My::Film->as_form->render;
+ok($empty_form =~ /name="d" type="text" value=""/,"empty date");
+ok($empty_form =~ /name="t" type="text" value=""/,"empty time");
+ok($empty_form =~ /name="dt" type="text" value=""/,"empty datetime");
+ok($empty_form =~ /name="ts" type="text" value=""/,"empty timestamp");
 
 __END__
