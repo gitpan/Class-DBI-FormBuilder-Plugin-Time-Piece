@@ -4,81 +4,60 @@ use warnings;
 
 use Class::DBI::FormBuilder 0.32 ();
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
+
+my %rx = (
+	date		=>	'/^(?:|\d{4}-\d\d-\d\d)$/',
+	time		=>	'/^(?:|\d\d:\d\d:\d\d)$/',
+	datetime	=>	'/^(?:|\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)$/',
+	timestamp	=>	'//', #'/^(?:|\d{14})$/',
+);
 
 sub field {
 	my($class,$them,$form,$field) = @_;
-	my $type = $them->column_type($field);
+	
+	# for certain CDBI::FB versions
+	$field = $field->name if UNIVERSAL::isa($field,'Class::DBI::Column');
 
-	# this is called as a class method
-	# there's no data to get, so just create the empty field
+	my $type = $them->column_type($field); # CDBI::Plugin::Type, or DBD::mysql, or ...?
+
+	my %args = (
+		name		=> $field,
+		value		=> '',
+		required	=>	0,
+		validate	=>	'//',
+	);
+
+	# called as a class method
+	# no data; create empty field
 	unless(ref $them) {
-		return $form->field(
-			name		=>	$field,
-			value		=>	'',
-			required	=>	0, # ??
-			validate	=>	{
-					date		=>	'/^(?:|\d{4}-\d\d-\d\d)$/',
-					time		=>	'/^(?:|\d\d:\d\d:\d\d)$/',
-					datetime	=>	'/^(?:|\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)$/',
-					timestamp	=>	'/^(?:|\d{14})$/',
-				}->{$type},
-		);
+		$args{validate} = $rx{$type};
+		return $form->field(%args);
 	}
 
-	my $value = $them->$field.''; # lousy default
+	my $value = do {
+		no warnings 'uninitialized';
+		$them->$field.''; # lousy default
+	};
 	my $validate = undef;
-	my $required = 0;
-	if($type eq 'time') {
-		if(UNIVERSAL::can($them->$field,'hms')) {
-			$value		= $them->$field->hms;
-			$validate	= '/^\d\d:\d\d:\d\d$/';
-			$required	= 1;
-		} else {
-			$value		= '';
-			$validate	= '/^(?:|\d\d:\d\d:\d\d)$/';
-			$required	= 0;
-		}
-	} elsif($type eq 'date') {
-		if(UNIVERSAL::can($them->$field,'ymd')) {
-			$value		= $them->$field->ymd;
-			$validate	= '/^(?:|\d{4}-\d\d-\d\d)$/';
-			$required	= 1;
-		} else {
-			$value		= '';
-			$validate	= '/^(?:|\d{4}-\d\d-\d\d)$/';
-			$required	= 0;
-		}
-	} elsif($type eq 'timestamp') {
-		if(UNIVERSAL::can($them->$field,'strftime')) {
-			$value		= $them->$field->strftime('%Y%m%d%H%M%S');
-			$validate	= '/^\d{14}$/';
-			$required	= 1;
-		} else {
-			$value		= '';
-			$validate	= '/^(?:|\d{14})$/';
-			$required	= 0;
-		}
-	} elsif($type eq 'datetime') {
-		if(UNIVERSAL::can($them->$field,'strftime')) {
-			$value		= $them->$field->strftime('%Y-%m-%d %H:%M:%S');
-			$validate	= '/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/';
-			$required	= 1;
-		} else {
-			$value		= '';
-			$validate	= '/^(?:|\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)$/';
-			$required	= 0;
-		}
+	if($type =~ /\btime\b/) {
+		$args{value} =	UNIVERSAL::can($them->$field,'hms') ? $them->$field->hms : '';
+	} elsif($type =~ /date\b/) {
+		$args{value} =	UNIVERSAL::can($them->$field,'ymd') ? $them->$field->ymd : '';
+	} elsif($type =~ /timestamp\b/) {
+		$args{value} =	UNIVERSAL::can($them->$field,'strftime')
+						? $them->$field->strftime('%Y%m%d%H%M%S')
+						: '';
+		$args{readonly} = 1; # no update of timestamps
+	} elsif($type =~ /datetime\b/) {
+		$args{value} =	UNIVERSAL::can($them->$field,'strftime')
+						? $them->$field->strftime('%Y-%m-%d %H:%M:%S')
+						: '';
 	} else {
 		die "don't understand column type '$type'";
 	}
 
-	$form->field(
-		name		=>	$field,
-		value		=>	$value,
-		required	=>	$required,
-		validate	=>	$validate,
-	);
+	$form->field(%args);
 }
 
 
@@ -93,30 +72,28 @@ Class::DBI::FormBuilder::Plugin::Time::Piece - Output Dates/Times Properly
 
 =head1 SYNOPSIS
 
-  Class::DBI::FormBuilder::Plugin::Time::Piece->require;
-  my $ok = Class::DBI::FormBuilder::Plugin::Time::Piece->field();
+  Class::DBI::FormBuilder::Plugin::Time::Piece-E<gt>require;
+  my $ok = Class::DBI::FormBuilder::Plugin::Time::Piece-E<gt>field($obj,$form,$column);
 
 =head1 DESCRIPTION
 
-This is called implicitly by CDBI::FormBuilder 0.32 and later, when it encounters
+This module is loaded implicitly by CDBI::FormBuilder E<lt>= 0.32, when it encounters
 a Time::Piece object as a has_a field within a Class::DBI object/class. When that happens,
-Class::DBI::FormBuilder::Plugin::Time::Piece->field($obj,$form,$field) is called.
+Class::DBI::FormBuilder::Plugin::Time::Piece-E<gt>field($obj,$form,$column) is called.
 
+=head2 my $ok = $class-E<gt>field($obj,$form,$column)
 
-
-=head2 my $ok = $class->field($obj,$form,$field)
-
-Like all CDBI::FB plugins, this holds one crucial sub: field(), which is called implicitly
-upon CDBI::FB finding a Time::Piece object in a has_a relationship within a Class::DBI
-object/class. This routine will accept the object for which a form is being created,
+This routine will accept the object for which a form is being created,
 the CGI::FormBuilder object we're working with, and the field in question. field() is
-then expected to call (and return the return value of) $form->field(%args). As a result, a
+then expected to call (and return the return value of) $form-E<gt>field(%args). As a result, a
 text field will be created within the form.
 
 At this point, CDBI::FB::Plugin::Time::Piece serializes itself based upon MySQL
 types. Patches are most welcome!
 
-WARNING: We call column_type() on $obj, so it must be a Class::DBI::mysql object, or 
+=head1 WARNING
+
+We call column_type() on $obj, so it must be a Class::DBI::mysql object, or 
 it needs to have used Class::DBI::Plugin::Type.
 
 =head1 SEE ALSO

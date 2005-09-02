@@ -1,5 +1,5 @@
 use strict;
-no warnings ;#FATAL => 'all';
+no warnings; #FATAL => 'all';
 $^W = 0;
 
 use Test::More;
@@ -23,12 +23,12 @@ BEGIN {
 		$dbh->do(qq[ DROP TABLE IF EXISTS movies ]);
 		$dbh->do(qq[
 		     CREATE TABLE movies (
-    	    	id     int(2) unsigned not null primary key auto_increment,
-    	    	title  VARCHAR(255),
-    	    	d   date,
-    	    	t   time,
-    	    	dt  datetime,
-    	    	ts  timestamp
+    	    	id		int(2) unsigned not null primary key auto_increment,
+    	    	title	VARCHAR(255),
+    	    	d		date,
+    	    	t		time,
+    	    	dt		datetime,
+    	    	ts		timestamp
     		 )
 		]) or die $DBI::errstr;
 	};
