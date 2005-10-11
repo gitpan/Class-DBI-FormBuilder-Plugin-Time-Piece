@@ -5,7 +5,7 @@ $^W = 0;
 use Test::More;
 use DBI;
 
-use Class::DBI::FormBuilder 0.32 ();
+use lib '/home/dave/distributions/cpan/Class-DBI-FormBuilder/lib';
 
 my @DSN;
 my $dbh;
@@ -13,7 +13,7 @@ my $dbh;
 BEGIN {
 	my $dbname = $ENV{DBD_MYSQL_DBNAME}	|| 'test';
 	my $db		= "dbi:mysql:$dbname";
-	my $user	=  $ENV{DBD_MYSQL_USER}		|| '';
+	my $user	=  $ENV{DBD_MYSQL_USER}		|| 'test';
 	my $pass	=  $ENV{DBD_MYSQL_PASSWD}	|| '';
 
 	@DSN = ($db, $user, $pass, {RaiseError=>1});
@@ -32,6 +32,7 @@ BEGIN {
     		 )
 		]) or die $DBI::errstr;
 	};
+    warn $@ if $@;
 	plan $@ ? (skip_all => 'needs a mysql account with create/drop table privs for testing') : (tests => 11);
 }
 
@@ -85,13 +86,14 @@ my $not_null_form = $not_null->as_form->render;
 ok($not_null_form =~ /name="d" type="text" value="2001-01-01"/,"date IS NOT NULL");
 ok($not_null_form =~ /name="t" type="text" value="11:11:11"/,"time IS NOT NULL");
 ok($not_null_form =~ /name="dt" type="text" value="2002-02-02 12:12:12"/,"datetime IS NOT NULL");
-ok($not_null_form =~ /name="ts" type="text" value="\d{14}"/,"timestamp IS NOT NULL");
+
+like($not_null_form, qr/name="ts" readonly="1" type="text" value="\d{14}"/, "timestamp IS NOT NULL");
 
 # create an empty form, as when creating a thing
 my $empty_form = My::Film->as_form->render;
 ok($empty_form =~ /name="d" type="text" value=""/,"empty date");
 ok($empty_form =~ /name="t" type="text" value=""/,"empty time");
 ok($empty_form =~ /name="dt" type="text" value=""/,"empty datetime");
-ok($empty_form =~ /name="ts" type="text" value=""/,"empty timestamp");
+ok($empty_form =~ /name="ts" readonly="1" type="text" value=""/,"empty timestamp");
 
 __END__

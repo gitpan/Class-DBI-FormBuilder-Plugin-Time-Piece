@@ -2,9 +2,7 @@ package Class::DBI::FormBuilder::Plugin::Time::Piece;
 use strict;
 use warnings;
 
-use Class::DBI::FormBuilder 0.32 ();
-
-our $VERSION = '0.04';
+our $VERSION = '0.1';
 
 my %rx = (
 	date		=>	'/^(?:|\d{4}-\d\d-\d\d)$/',
@@ -14,12 +12,12 @@ my %rx = (
 );
 
 sub field {
-	my($class,$them,$form,$field) = @_;
+	my($class,$cdbifb,$them,$form,$field) = @_;
 	
 	# for certain CDBI::FB versions
 	$field = $field->name if UNIVERSAL::isa($field,'Class::DBI::Column');
 
-	my $type = $them->column_type($field); # CDBI::Plugin::Type, or DBD::mysql, or ...?
+	my $type = $cdbifb->table_meta($them)->column($field)->type;
 
 	my %args = (
 		name		=> $field,
